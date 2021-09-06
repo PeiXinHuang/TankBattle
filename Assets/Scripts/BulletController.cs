@@ -6,25 +6,29 @@ using UnityEngine;
 public class BulletController : MonoBehaviourPun
 {
 
-
-
-    private void OnCollisionEnter(Collision collision)
+    private void OnTriggerEnter(Collider other)
     {
         //·¢Éä×Óµ¯
         if (photonView.IsMine)
         {
-            if (tag == "Player")
+ 
+            if (other.tag == "Player")
             {
-                collision.gameObject.GetComponent<PlayerController>().DownHP();
+        
+                other.gameObject.GetComponent<PlayerController>().DownHP();
             }
 
             PhotonNetwork.Destroy(this.gameObject);
-            return;
+          
         }
-       
+
         
+        
+ 
     }
 
 
- 
+
+
+
 }

@@ -21,18 +21,22 @@ MonoBehaviour:
     FixedRegion: CN
     Server: 
     Port: 0
-    ProxyServer: 
     Protocol: 0
-    EnableProtocolFallback: 1
-    AuthMode: 0
     EnableLobbyStatistics: 0
     NetworkLogging: 1
-  DevRegion: 
+  StartInOfflineMode: 0
   PunLogging: 0
   EnableSupportLogger: 0
   RunInBackground: 1
-  StartInOfflineMode: 0
-  RpcList: []
+  RpcList:
+  - ChangeCube
+  - DestroySpaceship
+  - Fire
+  - RespawnSpaceship
+  - SetSlider
+  - OnAllDestory
+  - SetHP
+  - OnAllDestroy
+  - SetName
   DisableAutoOpenWizard: 1
   ShowSettings: 1
-  DevRegionSetOnce: 0

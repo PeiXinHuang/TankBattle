@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class PlayerController : MonoBehaviourPun
+public class PlayerController : MonoBehaviourPun,IPunObservable
 {
     private Rigidbody rdby;
     private Animator animator;
@@ -25,7 +25,8 @@ public class PlayerController : MonoBehaviourPun
 
 
     public GameObject uiObj; //UI对象
-
+    public Slider hpSlider; //血条
+    public Text nameText; //名称
 
     private void Start()
     {
@@ -40,14 +41,33 @@ public class PlayerController : MonoBehaviourPun
     //初始化自己
     private void Init()
     {
-        //设置摄像机跟随
+
+       
+
         if (photonView.IsMine)
         {
-            Camera.main.GetComponent<CameraController>().target = this.camTran;
+            //设置摄像机跟随
+            Camera.main.GetComponent<CameraController>().selfTran = this.camTran;
+            Camera.main.GetComponent<CameraController>().playerTran = this.transform;
+
             uiObj.SetActive(false);
+
+            //获取其他玩家的名称,并设置
+            foreach (GameObject item in GameObject.FindGameObjectsWithTag("Player"))
+            {
+                Debug.Log(item.GetComponent<PhotonView>().Owner.NickName);
+                item.GetComponent<PlayerController>().nameText.text = item.GetComponent<PhotonView>().Owner.NickName;
+            }
+
+            //通知所有玩家自己的名称，并让他们为自己设置名称
+            photonView.RPC("SetName", RpcTarget.All,PhotonNetwork.NickName);
+
+            UIManager.Instance.SetNameText(PhotonNetwork.NickName);
+
         }
         else
         {
+           
 
         }
 
@@ -71,7 +91,7 @@ public class PlayerController : MonoBehaviourPun
         if (Input.GetKeyDown(KeyCode.Space))
         {      
             GameObject bullet = PhotonNetwork.Instantiate(bulletPreb.name, bulletTran.position, this.transform.rotation);
-            bullet.GetComponent<Rigidbody>().velocity = bullet.transform.forward * Time.deltaTime * 10000.0f;
+            bullet.GetComponent<Rigidbody>().velocity = bullet.transform.forward * Time.deltaTime * 30000.0f;
         }
     }
 
@@ -93,7 +113,7 @@ public class PlayerController : MonoBehaviourPun
         
     }
 
-    public void PlayAni()
+    private void PlayAni()
     {
 
         float v = Input.GetAxis("Vertical");
@@ -111,6 +131,11 @@ public class PlayerController : MonoBehaviourPun
     public void DownHP()
     {
 
+       
+
+
+        photonView.RPC("SetHP", RpcTarget.All);
+
     }
 
     public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
@@ -123,6 +148,29 @@ public class PlayerController : MonoBehaviourPun
         else
         {
             hpNum = (int)stream.ReceiveNext();
+            hpSlider.value = hpNum / 100.0f;
         }
+    }
+
+    //设置血量并同步
+    [PunRPC]
+    private void SetHP()
+    {
+        hpNum -= 10;
+        Debug.Log(hpNum);
+        hpSlider.value = hpNum / 100.0f;
+
+
+        if (photonView.IsMine)
+            UIManager.Instance.SetHpSlider(hpNum / 100.0f);
+    }
+
+
+    //设置名称并同步
+    [PunRPC]
+    private void SetName(string name)
+    {
+
+        nameText.text = name;
     }
 }
