@@ -5,21 +5,31 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviourPun
 {
-    [SerializeField]
-    private GameObject beginPlayScreen; //开始界面
+
+    public GameObject sendDataObj; //发送数据预制体
 
     public GameObject playPrefab; //角色预制体
 
+    public bool isBeginPlay = false; //是否开始游戏
+
     private void Awake()
     {
-        beginPlayScreen.SetActive(true);
+        UIManager.Instance.SetBeginPlayScreen(true);
     }
 
 
+    private void Start()
+    {
+
+    }
+
     public void OnClickBeginPlayButtn()
     {
+        
+
         CreateCharacter();
-        beginPlayScreen.SetActive(false);
+
+        UIManager.Instance.SetBeginPlayScreen(false);
     }
 
 
@@ -30,8 +40,23 @@ public class GameManager : MonoBehaviourPun
     {
         float randomX = Random.Range(-10, 10);
         float randomY = Random.Range(1, 10);
-        float randomZ = Random.Range(-10, 10);
-
+        float randomZ = Random.Range(-10, 10); 
         PhotonNetwork.Instantiate(playPrefab.name, new Vector3(randomX, randomY, randomZ), playPrefab.transform.rotation);
+
+        isBeginPlay = true;
     }
+
+
+    private void LateUpdate()
+    {
+        if (isBeginPlay)
+        {
+            GameData.Instance.UpdateData();
+            UIManager.Instance.UpdateUI();
+        }
+      
+
+    }
+
+
 }

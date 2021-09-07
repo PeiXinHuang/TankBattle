@@ -1,4 +1,5 @@
 using Photon.Pun;
+using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,15 +8,19 @@ using UnityEngine.UI;
 public class PlayerController : MonoBehaviourPun,IPunObservable
 {
     private Rigidbody rdby;
+    private Vector3 rdby_v;
+    private Vector3 rdby_av;
+
     private Animator animator;
 
-    public int hpNum = 100;
+    private Vector3 latestPos;
+    private Quaternion latestRot;
+
 
     public float forceNum = 250.0f;
     public float rotateSpeed = 50.0f;
+    private float aniDistance = 0.05f; //动画距离，大于这个值，动画才可以执行
 
-
-    private float aniDistance = 0.5f; //动画距离，大于这个值，动画才可以执行
 
     public GameObject bulletPreb; //子弹
     public Transform bulletTran; //子弹发射位置
@@ -24,9 +29,9 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
 
 
 
-    public GameObject uiObj; //UI对象
-    public Slider hpSlider; //血条
-    public Text nameText; //名称
+    [SerializeField]private GameObject uiObj; //UI对象
+    [SerializeField]private Slider hpSlider; //血条
+    [SerializeField]private Text nameText; //名称
 
     private void Start()
     {
@@ -52,17 +57,9 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
 
             uiObj.SetActive(false);
 
-            //获取其他玩家的名称,并设置
-            foreach (GameObject item in GameObject.FindGameObjectsWithTag("Player"))
-            {
-                Debug.Log(item.GetComponent<PhotonView>().Owner.NickName);
-                item.GetComponent<PlayerController>().nameText.text = item.GetComponent<PhotonView>().Owner.NickName;
-            }
-
-            //通知所有玩家自己的名称，并让他们为自己设置名称
-            photonView.RPC("SetName", RpcTarget.All,PhotonNetwork.NickName);
-
-            UIManager.Instance.SetNameText(PhotonNetwork.NickName);
+            DataConnectMgr.Instance.SetData<string>("playerName", PhotonNetwork.NickName);
+            DataConnectMgr.Instance.SetData<int>("hp", 100);
+            DataConnectMgr.Instance.SetData<int>("killNum", 0);
 
         }
         else
@@ -91,6 +88,7 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
         if (Input.GetKeyDown(KeyCode.Space))
         {      
             GameObject bullet = PhotonNetwork.Instantiate(bulletPreb.name, bulletTran.position, this.transform.rotation);
+            bullet.GetComponent<BulletController>().Init(this);
             bullet.GetComponent<Rigidbody>().velocity = bullet.transform.forward * Time.deltaTime * 30000.0f;
         }
     }
@@ -127,50 +125,71 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
 
 
 
-
-    public void DownHP()
+    public void DownHP(PlayerController attckPlayer)
     {
 
-       
+        Player player = photonView.Owner;
 
-
-        photonView.RPC("SetHP", RpcTarget.All);
+        int attckPlayerHp = DataConnectMgr.Instance.ReadData<int>("hp", player);
+        attckPlayerHp -= 10;
+        DataConnectMgr.Instance.SetData<int>("hp", attckPlayerHp, player);
 
     }
 
+
+    //自己死亡，攻击对象的击杀数加一
+    private void Die(PlayerController attckPlayer)
+    {
+        UIManager.Instance.SetDieScreen(true);
+    }
+
+    public void SetHpSlider(float hp)
+    {
+        hpSlider.value = hp;
+    }
+    public void SetNameText(string pname)
+    {
+        nameText.text = pname;
+    }
+
+
+    #region 同步刚体信息
     public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
     {
         if (stream.IsWriting)
         {
-            stream.SendNext(hpNum);
+            stream.SendNext(transform.position);
+            stream.SendNext(transform.rotation);
+            stream.SendNext(rdby.velocity);
+            stream.SendNext(rdby.angularVelocity);
+     
+        }
+        else
+        {
+            latestPos = (Vector3)stream.ReceiveNext();
+            latestRot = (Quaternion)stream.ReceiveNext();
+            rdby_v = (Vector3)stream.ReceiveNext();
+            rdby_av = (Vector3)stream.ReceiveNext();
+  
+        }
+    }
+
+    private void LateUpdate()
+    {
+
+        if (!photonView.IsMine)
+        {
+            transform.position = Vector3.Lerp(transform.position, latestPos, Time.deltaTime * 5);
+            transform.rotation = Quaternion.Lerp(transform.rotation, latestRot, Time.deltaTime * 5);
+            rdby.velocity = rdby_v;
+            rdby.angularVelocity = rdby_av;
+
 
         }
         else
         {
-            hpNum = (int)stream.ReceiveNext();
-            hpSlider.value = hpNum / 100.0f;
+            
         }
     }
-
-    //设置血量并同步
-    [PunRPC]
-    private void SetHP()
-    {
-        hpNum -= 10;
-        Debug.Log(hpNum);
-        hpSlider.value = hpNum / 100.0f;
-
-
-        if (photonView.IsMine)
-            UIManager.Instance.SetHpSlider(hpNum / 100.0f);
-    }
-
-
-    //设置名称并同步
-    [PunRPC]
-    private void SetName(string name)
-    {
-
-        nameText.text = name;
-    }
+    #endregion
 }
