@@ -25,7 +25,7 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
     public GameObject bulletPreb; //子弹
     public Transform bulletTran; //子弹发射位置
     public Transform camTran; //摄像机位置
-    
+
 
 
 
@@ -36,6 +36,7 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
     private void Start()
     {
         rdby = this.GetComponent<Rigidbody>();
+        
         animator = this.GetComponentInChildren<Animator>();
 
         this.Init();
@@ -57,10 +58,9 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
 
             uiObj.SetActive(false);
 
-            DataConnectMgr.Instance.SetData<string>("playerName", PhotonNetwork.NickName);
-            DataConnectMgr.Instance.SetData<int>("hp", 100);
-            DataConnectMgr.Instance.SetData<int>("killNum", 0);
+            DataConnectMgr.Instance.SetData<int>("hp", 100); //初始化血量
 
+            
         }
         else
         {
@@ -72,15 +72,27 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
 
 
 
+    public void UpdateTankUIRot()
+    {
+        uiObj.transform.LookAt(Camera.main.transform.position);
+
+    }
+
+
     public void Update()
     {
+        UpdateTankUIRot();
+
         if (!photonView.IsMine) return;
 
+      
         PlayAni();
 
         Rotate();
         Move();
         Attack();
+
+        RotateByTerrain();
     }
 
     private void Attack()
@@ -98,6 +110,7 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
     {
         float v = Input.GetAxis("Vertical");
         rdby.AddForce(this.transform.forward * v * Time.deltaTime * forceNum);
+        //this.GetComponent<CharacterController>().Move(this.transform.forward * v * Time.deltaTime * 3000);
     }
 
     private void Rotate()
@@ -105,6 +118,29 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
         float h = Input.GetAxis("Horizontal");
         transform.Rotate(0, h * Time.deltaTime * rotateSpeed, 0);
     }
+
+    private void RotateByTerrain()
+    {
+    
+
+        RaycastHit hit;
+
+        int Rmask = LayerMask.GetMask("Terrain");
+
+        Vector3 Point_dir = transform.TransformDirection(transform.up*(-1));
+
+        if (Physics.Raycast(transform.position, Point_dir, out hit, 50.0f, Rmask))
+        {
+
+            Quaternion NextRot = Quaternion.LookRotation(Vector3.Cross(hit.normal, Vector3.Cross(transform.forward, hit.normal)), hit.normal);
+
+
+            transform.rotation = Quaternion.Lerp(transform.rotation, NextRot, Time.deltaTime);
+
+        }
+    }
+
+ 
 
     private void OnDestroy()
     {
@@ -130,9 +166,20 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
 
         Player player = photonView.Owner;
 
-        int attckPlayerHp = DataConnectMgr.Instance.ReadData<int>("hp", player);
-        attckPlayerHp -= 10;
-        DataConnectMgr.Instance.SetData<int>("hp", attckPlayerHp, player);
+        //刷新血量
+        int playerHp = DataConnectMgr.Instance.ReadData<int>("hp", player);
+        playerHp -= 10;
+        DataConnectMgr.Instance.SetData<int>("hp", playerHp, player);
+
+        //血量小于0,攻击对象击杀数+1
+        if (playerHp <= 0)
+        {
+            int attackPlayerKillNum = DataConnectMgr.Instance.ReadData<int>("killNum", attckPlayer.photonView.Owner);
+            attackPlayerKillNum++;
+
+            DataConnectMgr.Instance.SetData<int>("killNum",attackPlayerKillNum, attckPlayer.photonView.Owner);
+
+        }
 
     }
 
@@ -162,7 +209,7 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
             stream.SendNext(transform.rotation);
             stream.SendNext(rdby.velocity);
             stream.SendNext(rdby.angularVelocity);
-     
+
         }
         else
         {
@@ -170,7 +217,7 @@ public class PlayerController : MonoBehaviourPun,IPunObservable
             latestRot = (Quaternion)stream.ReceiveNext();
             rdby_v = (Vector3)stream.ReceiveNext();
             rdby_av = (Vector3)stream.ReceiveNext();
-  
+
         }
     }
 

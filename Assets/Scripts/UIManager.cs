@@ -47,6 +47,12 @@ public class UIManager : MonoBehaviour
         dieScreen.SetActive(isShow);
     }
 
+    public void ShowDieScreen()
+    {
+        dieScreen.SetActive(true);
+
+    }
+
 
     /// <summary>
     /// Ë¢ÐÂUI
@@ -69,6 +75,7 @@ public class UIManager : MonoBehaviour
         PlayerData m_playdata = GameData.Instance.ReadData();
         SetHpSlider(m_playdata.Hp / 100.0f);
         SetNameText(m_playdata.PlayerName);
+        SetKillNumText(m_playdata.KillNum);
 
     }
 

@@ -83,10 +83,6 @@ public class DataConnectMgr : MonoBehaviourPun
         player.SetCustomProperties(hashtable);
 
     }
-   
-    
-
-
 
 
 }

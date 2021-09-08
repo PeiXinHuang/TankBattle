@@ -3,11 +3,12 @@ using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// 游戏数据，从模拟服务器（所有客户端的哈希表组成）中获取数据
 /// </summary>
-public class GameData
+public class GameData:MonoBehaviourPun
 {
 
     private static GameData instance;
@@ -17,7 +18,7 @@ public class GameData
         {
             if(instance == null)
             {
-                instance = new GameData();
+                instance = FindObjectOfType<GameData>();
             }
             return instance;
         }
@@ -36,14 +37,21 @@ public class GameData
 
 
         //添加数据
+        PlayerData playerData;
         foreach (PlayerController playerController in GameObject.FindObjectsOfType<PlayerController>())
         {
             Player player = playerController.photonView.Owner;
-            PlayerData playerData = new PlayerData();
+            playerData = new PlayerData();
             playerData.PlayerName = DataConnectMgr.Instance.ReadData<string>("playerName", player);
             playerData.Hp = DataConnectMgr.Instance.ReadData<int>("hp", player);
             playerData.KillNum = DataConnectMgr.Instance.ReadData<int>("killNum", player);
             playerDatas.Add(player.NickName,playerData);
+        }
+
+        playerData = ReadData();
+        if (BeKillAction != null && playerData.Hp <= 0)
+        {
+            BeKillAction();
         }
     }
 
@@ -70,6 +78,17 @@ public class GameData
         }
         return playerData;
     }
+
+    private event UnityAction BeKillAction;
+    public void AddBeKillListen(UnityAction fun)
+    {
+        BeKillAction += fun;
+    }
+    public void RemoveBeKillListen(UnityAction fun)
+    {
+        BeKillAction -= fun;
+    }
+
 
 }
 

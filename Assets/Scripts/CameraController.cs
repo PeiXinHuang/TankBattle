@@ -1,10 +1,9 @@
-using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class CameraController : MonoBehaviourPun
+public class CameraController : MonoBehaviour
 {
     public Transform selfTran;//主相机要围绕其旋转的物体 
     public Transform playerTran; //游戏对象
